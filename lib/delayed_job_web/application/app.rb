@@ -2,7 +2,7 @@ require 'sinatra'
 require 'active_support'
 require 'delayed_job'
 require 'haml'
-require "mongoid"
+
 class DelayedJobWeb < Sinatra::Base
   set :root, File.dirname(__FILE__)
   set :static, true
@@ -62,57 +62,29 @@ class DelayedJobWeb < Sinatra::Base
   get '/stats' do
     haml :stats
   end
-  
-  get "/enqueued" do
-    @jobs = Delayed::Job.desc(:created_at).offset(start).limit(per_page)
-    @all_jobs = Delayed::Job
-    
-    haml :enqueued
-  end
 
-  get "/enqueued" do
-    @jobs = Delayed::Job.desc(:created_at).offset(start).limit(per_page)
-    @all_jobs = Delayed::Job
-    
-    haml :enqueued
+  %w(enqueued working pending failed).each do |page|
+    get "/#{page}" do
+      @jobs = delayed_jobs(page.to_sym).desc(:created_at).offset(start).limit(per_page)
+      @all_jobs = delayed_jobs(page.to_sym)
+      haml page.to_sym
+    end
   end
-
-  get "/working" do
-    @jobs = Delayed::Job.not_in(:locked_at => nil).desc(:created_at).offset(start).limit(per_page)
-    @all_jobs = Delayed::Job.not_in(:locked_at => nil)
-    
-    haml :working
-  end
-
-  get "/failed" do
-    @jobs = Delayed::Job.not_in(:last_error => nil).desc(:created_at).offset(start).limit(per_page)
-    @all_jobs = Delayed::Job.not_in(:last_error => nil)
-    
-    haml :failed
-  end
-  
-  get "/pending" do
-    @jobs = Delayed::Job.not_in(:attempts => nil).desc(:created_at).offset(start).limit(per_page)
-    @all_jobs = Delayed::Job.not_in(:attempts => nil)
-    
-    haml :pending
-  end
-
 
   get "/remove/:id" do
-    Delayed::Job.find(params[:id]).delete
+    delayed_job.find(params[:id]).delete
     redirect back
   end
 
   get "/requeue/:id" do
-    job = Delayed::Job.find(params[:id])
+    job = delayed_job.find(params[:id])
     job.run_at = Time.now
     job.save
     redirect back
   end
 
   post "/failed/clear" do
-    Delayed::Job.destroy_all(delayed_job_sql(:failed))
+    delayed_job(:failed).destroy_all
     redirect u('failed')
   end
 
@@ -122,19 +94,28 @@ class DelayedJobWeb < Sinatra::Base
   end
 
   def delayed_jobs(type)
-    delayed_job.where(delayed_job_sql(type))
+    case type
+    when :enqueued
+      delayed_job
+    when :working
+      delayed_job.not_in(:locked_at => nil)
+    when :failed
+      delayed_job.not_in(:last_error => nil)
+    when :pending
+      delayed_job.where(:attempts => 0)
+    end
   end
 
   def delayed_job_sql(type)
     case type
     when :enqueued
-      {}
+      ''
     when :working
-      { }
+      'locked_at is not null'
     when :failed
-      { }
+      'last_error is not null'
     when :pending
-      { :attempts => 0 }
+      'attempts = 0'
     end
   end
 
