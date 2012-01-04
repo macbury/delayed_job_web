@@ -62,29 +62,57 @@ class DelayedJobWeb < Sinatra::Base
   get '/stats' do
     haml :stats
   end
-
-  %w(enqueued working pending failed).each do |page|
-    get "/#{page}" do
-      @jobs = delayed_jobs(page.to_sym).desc(:created_at).offset(start).limit(per_page)
-      @all_jobs = delayed_jobs(page.to_sym)
-      haml page.to_sym
-    end
+  
+  get "/enqueued"
+    @jobs = Delayed::Job.desc(:created_at).offset(start).limit(per_page)
+    @all_jobs = Delayed::Job
+    
+    haml :enqueued
   end
 
+  get "/enqueued"
+    @jobs = Delayed::Job.desc(:created_at).offset(start).limit(per_page)
+    @all_jobs = Delayed::Job
+    
+    haml :enqueued
+  end
+
+  get "/working"
+    @jobs = Delayed::Job.not_in(:locked_at => nil).desc(:created_at).offset(start).limit(per_page)
+    @all_jobs = Delayed::Job.not_in(:locked_at => nil)
+    
+    haml :working
+  end
+
+  get "/failed"
+    @jobs = Delayed::Job.not_in(:last_error => nil).desc(:created_at).offset(start).limit(per_page)
+    @all_jobs = Delayed::Job.not_in(:last_error => nil)
+    
+    haml :failed
+  end
+  
+  get "/pending"
+    @jobs = Delayed::Job.not_in(:attempts => nil).desc(:created_at).offset(start).limit(per_page)
+    @all_jobs = Delayed::Job.not_in(:attempts => nil)
+    
+    haml :pending
+  end
+
+
   get "/remove/:id" do
-    delayed_job.find(params[:id]).delete
+    Delayed::Job.find(params[:id]).delete
     redirect back
   end
 
   get "/requeue/:id" do
-    job = delayed_job.find(params[:id])
+    job = Delayed::Job.find(params[:id])
     job.run_at = Time.now
     job.save
     redirect back
   end
 
   post "/failed/clear" do
-    delayed_job.destroy_all(delayed_job_sql(:failed))
+    Delayed::Job.destroy_all(delayed_job_sql(:failed))
     redirect u('failed')
   end
 
@@ -102,7 +130,7 @@ class DelayedJobWeb < Sinatra::Base
     when :enqueued
       {}
     when :working
-      { :locked_at.not => nil}
+      { }
     when :failed
       { :last_error.not => nil }
     when :pending
