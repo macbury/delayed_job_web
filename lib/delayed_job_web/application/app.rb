@@ -98,9 +98,9 @@ class DelayedJobWeb < Sinatra::Base
     when :enqueued
       delayed_job
     when :working
-      delayed_job.not_in(:locked_at => nil)
+      delayed_job.excludes(:locked_at => nil)
     when :failed
-      delayed_job.not_in(:last_error => nil)
+      delayed_job.excludes(:last_error => nil)
     when :pending
       delayed_job.where(:attempts => 0)
     end
