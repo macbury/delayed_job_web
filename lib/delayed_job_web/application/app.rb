@@ -132,7 +132,7 @@ class DelayedJobWeb < Sinatra::Base
     when :working
       { }
     when :failed
-      { :last_error.not => nil }
+      { }
     when :pending
       { :attempts => 0 }
     end
