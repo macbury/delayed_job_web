@@ -63,35 +63,35 @@ class DelayedJobWeb < Sinatra::Base
     haml :stats
   end
   
-  get "/enqueued"
+  get "/enqueued" do
     @jobs = Delayed::Job.desc(:created_at).offset(start).limit(per_page)
     @all_jobs = Delayed::Job
     
     haml :enqueued
   end
 
-  get "/enqueued"
+  get "/enqueued" do
     @jobs = Delayed::Job.desc(:created_at).offset(start).limit(per_page)
     @all_jobs = Delayed::Job
     
     haml :enqueued
   end
 
-  get "/working"
+  get "/working" do
     @jobs = Delayed::Job.not_in(:locked_at => nil).desc(:created_at).offset(start).limit(per_page)
     @all_jobs = Delayed::Job.not_in(:locked_at => nil)
     
     haml :working
   end
 
-  get "/failed"
+  get "/failed" do
     @jobs = Delayed::Job.not_in(:last_error => nil).desc(:created_at).offset(start).limit(per_page)
     @all_jobs = Delayed::Job.not_in(:last_error => nil)
     
     haml :failed
   end
   
-  get "/pending"
+  get "/pending" do
     @jobs = Delayed::Job.not_in(:attempts => nil).desc(:created_at).offset(start).limit(per_page)
     @all_jobs = Delayed::Job.not_in(:attempts => nil)
     
