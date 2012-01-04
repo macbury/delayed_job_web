@@ -2,7 +2,7 @@ require 'sinatra'
 require 'active_support'
 require 'delayed_job'
 require 'haml'
-
+require "mongoid"
 class DelayedJobWeb < Sinatra::Base
   set :root, File.dirname(__FILE__)
   set :static, true
